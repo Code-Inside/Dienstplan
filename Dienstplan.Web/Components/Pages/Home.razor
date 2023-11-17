@@ -1,0 +1,162 @@
+﻿@page "/"
+@using System.Text
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+<script>
+    window.downloadFileFromStream = async (fileName, contentStreamReference) => {
+        const arrayBuffer = await contentStreamReference.arrayBuffer();
+        const blob = new Blob([arrayBuffer]);
+        const url = URL.createObjectURL(blob);
+        const anchorElement = document.createElement('a');
+        anchorElement.href = url;
+        anchorElement.download = fileName ?? '';
+        anchorElement.click();
+        anchorElement.remove();
+        URL.revokeObjectURL(url);
+    }
+</script>
+
+@code {
+    private List<int> years = new List<int>();
+    private List<int> months = new List<int>();
+    private int selectedYear;
+    private int selectedMonth;
+    private List<DateTime> daysInMonth = new List<DateTime>();
+    private Dictionary<string, string> dayInputs = new Dictionary<string, string>();
+
+    protected override void OnInitialized()
+    {
+        // Initialize years and months
+        years = Enumerable.Range(DateTime.Now.Year, 2).ToList();
+        months = Enumerable.Range(1, 12).ToList();
+
+        // Set default values
+        selectedYear = DateTime.Now.Year;
+        selectedMonth = DateTime.Now.Month;
+
+        UpdateDaysInMonth();
+    }
+
+    private void OnYearChanged(ChangeEventArgs e)
+    {
+        selectedYear = int.Parse(e.Value.ToString());
+        UpdateDaysInMonth();
+    }
+
+    private void OnMonthChanged(ChangeEventArgs e)
+    {
+        selectedMonth = int.Parse(e.Value.ToString());
+        UpdateDaysInMonth();
+    }
+
+    private void UpdateDaysInMonth()
+    {
+        daysInMonth.Clear();
+        dayInputs.Clear();
+
+        int days = DateTime.DaysInMonth(selectedYear, selectedMonth);
+        for (int i = 1; i <= days; i++)
+        {
+            DateTime day = new DateTime(selectedYear, selectedMonth, i);
+            daysInMonth.Add(day);
+            string dateString = day.ToString("yyyy-MM-dd");
+            if (!dayInputs.ContainsKey(dateString))
+            {
+                dayInputs[dateString] = string.Empty; // Initialize with empty string
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private Stream GetFileStream()
+    {
+        var binaryData = new byte[50 * 1024];
+        var fileStream = new MemoryStream(binaryData);
+        return fileStream;
+    }
+
+    private async Task DownloadFileFromStream()
+    {
+        var fileStream = GetFileStream();
+
+    }
+
+    private async Task HandleFormSubmit()
+    {
+        // Here, send the data to the server. This is an example of how you might do it.
+        // You would replace this with your actual HTTP request logic.
+        var dataToSend = dayInputs; // This is the data you will send.
+
+        string calendarContent = GenerateICalendarContent();
+
+        var fileName = "dienstplan.ics";
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes(calendarContent));
+        using var streamRef = new DotNetStreamReference(stream: stream);
+
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+
+    private string GenerateICalendarContent()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("BEGIN:VCALENDAR");
+        sb.AppendLine("VERSION:2.0");
+        sb.AppendLine("PRODID:-//Your Company//Your Product//EN");
+
+        foreach (var entry in dayInputs)
+        {
+            if (!string.IsNullOrWhiteSpace(entry.Value)) // Check if there is input for the day
+            {
+                DateTime day = DateTime.Parse(entry.Key);
+                sb.AppendLine("BEGIN:VEVENT");
+                sb.AppendLine($"DTSTART;VALUE=DATE:{day:yyyyMMdd}");
+                sb.AppendLine($"DTEND;VALUE=DATE:{day.AddDays(1):yyyyMMdd}");
+                sb.AppendLine($"SUMMARY:{entry.Value}");
+                sb.AppendLine("END:VEVENT");
+            }
+        }
+
+        sb.AppendLine("END:VCALENDAR");
+        return sb.ToString();
+    }
+}
+
+<div>
+    <label for="yearPicker">Year:</label>
+    <select id="yearPicker" @onchange="OnYearChanged">
+        @foreach (var year in years)
+        {
+            <option value="@year" selected="@(year == selectedYear)">@year</option>
+        }
+    </select>
+
+    <label for="monthPicker">Month:</label>
+    <select id="monthPicker" @onchange="OnMonthChanged">
+        @foreach (var month in months)
+        {
+            <option value="@month" selected="@(month == selectedMonth)">@month</option>
+        }
+    </select>
+</div>
+
+<div>
+    <EditForm Model="@dayInputs" OnValidSubmit="HandleFormSubmit">
+
+
+        <div>
+            @foreach (var day in daysInMonth)
+            {
+                var dayKey = day.ToString("yyyy-MM-dd");
+                <div>
+                    <label>@day.ToString("yyyy-MM-dd"):</label>
+                    <InputText type="text" @bind-Value="dayInputs[dayKey]" />
+                </div>
+            }
+        </div>
+
+
+        <button type="submit">Submit</button>
+    </EditForm>
+</div>
