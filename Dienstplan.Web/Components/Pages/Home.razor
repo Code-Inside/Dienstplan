@@ -123,40 +123,82 @@
     }
 }
 
-<div>
-    <label for="yearPicker">Year:</label>
-    <select id="yearPicker" @onchange="OnYearChanged">
-        @foreach (var year in years)
-        {
-            <option value="@year" selected="@(year == selectedYear)">@year</option>
-        }
-    </select>
+<EditForm Model="@dayInputs" OnValidSubmit="HandleFormSubmit">
+    <div class="space-y-12">
+        <div class="border-b border-gray-900/10 pb-12">
+            <h2 class="text-base font-semibold leading-7 text-gray-900">Jahr & Monatswahl</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-600">Wähle das Jahr und den Monat aus.</p>
 
-    <label for="monthPicker">Month:</label>
-    <select id="monthPicker" @onchange="OnMonthChanged">
-        @foreach (var month in months)
-        {
-            <option value="@month" selected="@(month == selectedMonth)">@month</option>
-        }
-    </select>
-</div>
-
-<div>
-    <EditForm Model="@dayInputs" OnValidSubmit="HandleFormSubmit">
-
-
-        <div>
-            @foreach (var day in daysInMonth)
-            {
-                var dayKey = day.ToString("yyyy-MM-dd");
-                <div>
-                    <label>@day.ToString("yyyy-MM-dd"):</label>
-                    <InputText type="text" @bind-Value="dayInputs[dayKey]" />
+            <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+                <div class="sm:col-span-4">
+                    <label for="yearPicker" class="block text-sm font-medium leading-6 text-gray-900">Jahr</label>
+                    <div class="mt-2">
+                        <select id="yearPicker" @onchange="OnYearChanged" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6">
+                            @foreach (var year in years)
+                            {
+                                <option value="@year" selected="@(year == selectedYear)">@year</option>
+                            }
+                        </select>
+                    </div>
                 </div>
-            }
+
+                <div class="sm:col-span-4">
+                    <label for="monthPicker" class="block text-sm font-medium leading-6 text-gray-900">Monat</label>
+                    <div class="mt-2">
+                        <select id="monthPicker" @onchange="OnMonthChanged" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6">
+                            @foreach (var month in months)
+                            {
+                                <option value="@month" selected="@(month == selectedMonth)">@month</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
 
+        <div class="border-b border-gray-900/10 pb-12">
+            <h2 class="text-base font-semibold leading-7 text-gray-900">Welchen Dienst hast du am...?</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-600">Wähle die entsprechenden Dienste aus, welche du an dem jeweiligen Tag hast.</p>
 
-        <button type="submit">Submit</button>
-    </EditForm>
-</div>
+            <div class="mt-10 space-y-10">
+
+                @foreach (var day in daysInMonth)
+                {
+                    var dayKey = day.ToString("yyyy-MM-dd");
+                    <div>
+                        <label class="text-base font-semibold text-gray-900">@dayKey</label>
+                        <fieldset class="mt-4">
+                            <legend class="sr-only">Dienst:</legend>
+                            <InputRadioGroup @bind-Value="@dayInputs[dayKey]">
+
+                                <div class="space-y-4 sm:flex sm:items-center sm:space-x-10 sm:space-y-0">
+                                    <div class="flex items-center">
+                                        <InputRadio Value="@("F")" id="@(dayKey + "_F")" checked class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600" />
+                                        <label for="@(dayKey + "_F")" class="ml-3 block text-sm font-medium leading-6 text-gray-900">Frühdienst</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <InputRadio Value="@("S")" id="@(dayKey + "_S")" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600" />
+                                        <label for="@(dayKey + "_S")" class="ml-3 block text-sm font-medium leading-6 text-gray-900">Spätdienst</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <InputRadio Value="@("N")" id="@(dayKey + "_N")" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600" />
+                                        <label for="@(dayKey + "_N")" class="ml-3 block text-sm font-medium leading-6 text-gray-900">Nachtdienst</label>
+                                    </div>
+                                </div>
+                            </InputRadioGroup>
+                        </fieldset>
+                    </div>
+                }
+
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-6 flex items-center justify-end gap-x-6">
+        <button type="submit" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Kalenderdatei exportieren...</button>
+    </div>
+</EditForm>
+
+
+
+
