@@ -4,7 +4,7 @@ on:
     - main
 env:
   DOTNET_CORE_VERSION: 8.0.x
-  CONTAINER_APP_NAME: dienstplan.web-container-app
+  CONTAINER_APP_NAME: dienstplan-web-container-app
   CONTAINER_APP_ENVIRONMENT_NAME: Dienstplan
   RESOURCE_GROUP: Dienstplan
   CONTAINER_REGISTRY_NAME: dienstplanregistry
