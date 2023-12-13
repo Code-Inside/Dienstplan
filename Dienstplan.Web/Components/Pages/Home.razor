@@ -105,7 +105,7 @@
 
         foreach (var entry in dayInputs)
         {
-            if (!string.IsNullOrWhiteSpace(entry.Value)) // Check if there is input for the day
+            if (!string.IsNullOrWhiteSpace(entry.Value)) 
             {
                 DateTime day = DateTime.Parse(entry.Key);
                 sb.AppendLine("BEGIN:VEVENT");
