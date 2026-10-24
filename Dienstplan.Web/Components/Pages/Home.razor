@@ -1,202 +1,82 @@
 ﻿@page "/"
-@using System.Text
-@rendermode InteractiveServer
-@inject IJSRuntime JS
 
-<script>
-    window.downloadFileFromStream = async (fileName, contentStreamReference) => {
-        const arrayBuffer = await contentStreamReference.arrayBuffer();
-        const blob = new Blob([arrayBuffer]);
-        const url = URL.createObjectURL(blob);
-        const anchorElement = document.createElement('a');
-        anchorElement.href = url;
-        anchorElement.download = fileName ?? '';
-        anchorElement.click();
-        anchorElement.remove();
-        URL.revokeObjectURL(url);
-    }
-</script>
+<PageTitle>Dienstplan</PageTitle>
 
-@code {
-    private List<int> years = new List<int>();
-    private List<int> months = new List<int>();
-    private int selectedYear;
-    private int selectedMonth;
-    private List<DateTime> daysInMonth = new List<DateTime>();
-    private Dictionary<string, string> dayInputs = new Dictionary<string, string>();
-
-    protected override void OnInitialized()
-    {
-        // Initialize years and months
-        years = Enumerable.Range(DateTime.Now.Year, 2).ToList();
-        months = Enumerable.Range(1, 12).ToList();
-
-        // Set default values
-        selectedYear = DateTime.Now.Year;
-        selectedMonth = DateTime.Now.Month;
-
-        UpdateDaysInMonth();
-    }
-
-    private void OnYearChanged(ChangeEventArgs e)
-    {
-        selectedYear = int.Parse(e.Value.ToString());
-        UpdateDaysInMonth();
-    }
-
-    private void OnMonthChanged(ChangeEventArgs e)
-    {
-        selectedMonth = int.Parse(e.Value.ToString());
-        UpdateDaysInMonth();
-    }
-
-    private void UpdateDaysInMonth()
-    {
-        daysInMonth.Clear();
-        dayInputs.Clear();
-
-        int days = DateTime.DaysInMonth(selectedYear, selectedMonth);
-        for (int i = 1; i <= days; i++)
-        {
-            DateTime day = new DateTime(selectedYear, selectedMonth, i);
-            daysInMonth.Add(day);
-            string dateString = day.ToString("yyyy-MM-dd");
-            if (!dayInputs.ContainsKey(dateString))
-            {
-                dayInputs[dateString] = string.Empty; // Initialize with empty string
-            }
-        }
-
-        StateHasChanged();
-    }
-
-    private Stream GetFileStream()
-    {
-        var binaryData = new byte[50 * 1024];
-        var fileStream = new MemoryStream(binaryData);
-        return fileStream;
-    }
-
-    private async Task DownloadFileFromStream()
-    {
-        var fileStream = GetFileStream();
-
-    }
-
-    private async Task HandleFormSubmit()
-    {
-        var dataToSend = dayInputs; 
-
-        string calendarContent = GenerateICalendarContent();
-
-        var fileName = "dienstplan.ics";
-        var stream = new MemoryStream(Encoding.UTF8.GetBytes(calendarContent));
-        using var streamRef = new DotNetStreamReference(stream: stream);
-
-        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
-    }
-
-    private string GenerateICalendarContent()
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("BEGIN:VCALENDAR");
-        sb.AppendLine("VERSION:2.0");
-        sb.AppendLine("PRODID:-//Code Inside//Dienstplan//DE");
-
-        foreach (var entry in dayInputs)
-        {
-            if (!string.IsNullOrWhiteSpace(entry.Value)) 
-            {
-                DateTime day = DateTime.Parse(entry.Key);
-                sb.AppendLine("BEGIN:VEVENT");
-                sb.AppendLine($"DTSTART;VALUE=DATE:{day:yyyyMMdd}");
-                sb.AppendLine($"DTEND;VALUE=DATE:{day.AddDays(1):yyyyMMdd}");
-                sb.AppendLine($"SUMMARY:{entry.Value}");
-                sb.AppendLine("END:VEVENT");
-            }
-        }
-
-        sb.AppendLine("END:VCALENDAR");
-        return sb.ToString();
-    }
-}
-
-<EditForm Model="@dayInputs" OnValidSubmit="HandleFormSubmit">
-    <div class="space-y-12">
-        <div class="border-b border-gray-900/10 pb-12">
-            <h2 class="text-base font-semibold leading-7 text-gray-900">Jahr & Monatswahl</h2>
-            <p class="mt-1 text-sm leading-6 text-gray-600">Wähle das Jahr und den Monat aus.</p>
-
-            <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-                <div class="sm:col-span-4">
-                    <label for="yearPicker" class="block text-sm font-medium leading-6 text-gray-900">Jahr</label>
-                    <div class="mt-2">
-                        <select id="yearPicker" @onchange="OnYearChanged" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6">
-                            @foreach (var year in years)
-                            {
-                                <option value="@year" selected="@(year == selectedYear)">@year</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-
-                <div class="sm:col-span-4">
-                    <label for="monthPicker" class="block text-sm font-medium leading-6 text-gray-900">Monat</label>
-                    <div class="mt-2">
-                        <select id="monthPicker" @onchange="OnMonthChanged" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6">
-                            @foreach (var month in months)
-                            {
-                                <option value="@month" selected="@(month == selectedMonth)">@month</option>
-                            }
-                        </select>
-                    </div>
-                </div>
+@* The page is static; all interaction lives in wwwroot/app.js so it keeps working when iOS suspends the tab. *@
+<div class="app">
+    <header class="topbar">
+        <div class="brand">
+            <img class="logo" src="@Assets["logo.svg"]" alt="" width="46" height="46" />
+            <div>
+                <h1>Dienstplan</h1>
+                <p>Antippen – ab in den Kalender.</p>
             </div>
         </div>
-
-        <div class="border-b border-gray-900/10 pb-12">
-            <h2 class="text-base font-semibold leading-7 text-gray-900">Welchen Dienst hast du am...?</h2>
-            <p class="mt-1 text-sm leading-6 text-gray-600">Wähle die entsprechenden Dienste aus, welche du an dem jeweiligen Tag hast.</p>
-
-            <div class="mt-10 space-y-10">
-
-                @foreach (var day in daysInMonth)
-                {
-                    var dayKey = day.ToString("yyyy-MM-dd");
-                    <div>
-                        <label class="text-base font-semibold text-gray-900">@dayKey</label>
-                        <fieldset class="mt-4">
-                            <legend class="sr-only">Dienst:</legend>
-                            <InputRadioGroup @bind-Value="@dayInputs[dayKey]">
-
-                                <div class="space-y-4 sm:flex sm:items-center sm:space-x-10 sm:space-y-0">
-                                    <div class="flex items-center">
-                                        <InputRadio Value="@("F")" id="@(dayKey + "_F")" checked class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600" />
-                                        <label for="@(dayKey + "_F")" class="ml-3 block text-sm font-medium leading-6 text-gray-900">Frühdienst</label>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <InputRadio Value="@("S")" id="@(dayKey + "_S")" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600" />
-                                        <label for="@(dayKey + "_S")" class="ml-3 block text-sm font-medium leading-6 text-gray-900">Spätdienst</label>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <InputRadio Value="@("N")" id="@(dayKey + "_N")" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600" />
-                                        <label for="@(dayKey + "_N")" class="ml-3 block text-sm font-medium leading-6 text-gray-900">Nachtdienst</label>
-                                    </div>
-                                </div>
-                            </InputRadioGroup>
-                        </fieldset>
-                    </div>
-                }
-
-            </div>
+        <div class="actions">
+            <button id="theme-toggle" class="icon-btn" type="button" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel umschalten">
+                <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z" /></svg>
+                <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2" /><path d="M12 2v2.2M12 19.8V22M2 12h2.2M19.8 12H22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6" /></svg>
+            </button>
+            <button id="open-settings" class="icon-btn" type="button" aria-label="Meine Dienste bearbeiten" title="Meine Dienste bearbeiten">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg>
+            </button>
         </div>
+    </header>
+
+    <section class="card" aria-labelledby="month-label">
+        <div class="month-nav">
+            <button id="prev-month" class="icon-btn" type="button" aria-label="Vorheriger Monat">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
+            </button>
+            <h2 id="month-label" aria-live="polite"></h2>
+            <button id="next-month" class="icon-btn" type="button" aria-label="Nächster Monat">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7" /></svg>
+            </button>
+        </div>
+
+        <div class="weekdays" aria-hidden="true">
+            <span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span class="weekend">Sa</span><span class="weekend">So</span>
+        </div>
+        <div id="grid" class="grid"></div>
+
+        <div class="month-footer">
+            <div id="summary" class="summary"></div>
+            <button id="clear-month" class="link-btn" type="button">Monat leeren</button>
+        </div>
+    </section>
+
+    <ol class="howto">
+        <li>Dienst unten auswählen</li>
+        <li>Tage im Kalender antippen</li>
+        <li>„In den Kalender“ tippen</li>
+    </ol>
+</div>
+
+<div class="dock">
+    <div class="dock-inner">
+        <div id="palette" class="palette" role="radiogroup" aria-label="Dienst zum Eintragen"></div>
+        <a id="export" class="primary" href="#" aria-disabled="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="3" /><path d="M8 2.5v4M16 2.5v4M12 11v6M9 14h6" /></svg>
+            <span id="export-label">In den Kalender</span>
+        </a>
     </div>
+</div>
 
-    <div class="mt-6 flex items-center justify-end gap-x-6">
-        <button type="submit" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Kalenderdatei exportieren...</button>
-    </div>
-</EditForm>
+<dialog id="settings" aria-labelledby="settings-title">
+    <form method="dialog" class="sheet">
+        <header class="sheet-head">
+            <h2 id="settings-title">Meine Dienste</h2>
+            <button class="icon-btn" value="close" aria-label="Schließen">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+        </header>
+        <p class="muted">Wird nur in diesem Browser gespeichert. Ohne Uhrzeiten wird ein ganztägiger Termin angelegt (z.&nbsp;B. für Urlaub oder Fortbildung).</p>
+        <div id="shift-list" class="shift-list"></div>
+        <div class="sheet-actions">
+            <button id="add-shift" class="secondary" type="button">+ Dienst hinzufügen</button>
+            <button id="reset-shifts" class="link-btn" type="button">Standard wiederherstellen</button>
+        </div>
+    </form>
+</dialog>
 
-
-
-
+<div id="toast" class="toast" role="status" aria-live="polite"></div>

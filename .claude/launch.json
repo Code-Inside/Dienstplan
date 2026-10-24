@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dienstplan",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "Dienstplan.Web", "--launch-profile", "http"],
+      "port": 5034
+    }
+  ]
+}

@@ -2,8 +2,8 @@ on:
   push:
     branches:
     - main
+  workflow_dispatch:
 env:
-  DOTNET_CORE_VERSION: 8.0.x
   CONTAINER_APP_NAME: dienstplan-web-container-app
   CONTAINER_APP_ENVIRONMENT_NAME: Dienstplan
   RESOURCE_GROUP: Dienstplan
@@ -14,17 +14,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout source code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+        global-json-file: global.json
+    - name: Test
+      run: dotnet test Dienstplan.slnx
     - name: Azure login
-      uses: azure/login@v1
+      uses: azure/login@v2
       with:
         creds: ${{ secrets.Dienstplan_SPN }}
+    # Builds the image from the Dockerfile in the repository root.
     - name: Container App deploy
-      uses: azure/container-apps-deploy-action@v1
+      uses: azure/container-apps-deploy-action@v2
       with:
         appSourcePath: ${{ github.workspace }}
         acrName: ${{ env.CONTAINER_REGISTRY_NAME }}
@@ -34,3 +37,4 @@ jobs:
         containerAppName: ${{ env.CONTAINER_APP_NAME }}
         containerAppEnvironment: ${{ env.CONTAINER_APP_ENVIRONMENT_NAME }}
         resourceGroup: ${{ env.RESOURCE_GROUP }}
+        targetPort: 8080
