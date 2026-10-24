@@ -4,8 +4,8 @@
     {
       "name": "dienstplan",
       "runtimeExecutable": "dotnet",
-      "runtimeArgs": ["run", "--project", "Dienstplan.Web", "--launch-profile", "http"],
-      "port": 5034
+      "runtimeArgs": ["run", "--project", "Dienstplan.Web", "--launch-profile", "http", "--urls", "http://localhost:5040"],
+      "port": 5040
     }
   ]
 }

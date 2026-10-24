@@ -3,9 +3,9 @@
 
     const COLORS = ['sun', 'coral', 'night', 'mint', 'sky', 'plum', 'rose', 'slate'];
     const DEFAULT_SHIFTS = [
-        { id: 'f', code: 'F', name: 'Frühdienst', start: '06:00', end: '14:00', color: 'sun' },
-        { id: 's', code: 'S', name: 'Spätdienst', start: '13:30', end: '21:30', color: 'coral' },
-        { id: 'n', code: 'N', name: 'Nachtdienst', start: '21:00', end: '06:30', color: 'night' },
+        { id: 'f', code: 'F', name: 'Frühdienst', color: 'sun' },
+        { id: 's', code: 'S', name: 'Spätdienst', color: 'coral' },
+        { id: 'n', code: 'N', name: 'Nachtdienst', color: 'night' },
     ];
     const ERASER = 'erase';
     const KEYS = { shifts: 'dienstplan.shifts', plan: 'dienstplan.plan', theme: 'dienstplan.theme' };
@@ -42,7 +42,6 @@
     const monthPrefix = () => `${year}-${pad(month + 1)}-`;
     const shiftById = (id) => shifts.find((s) => s.id === id);
     const label = (s) => s.name.trim() || s.code.trim() || 'Dienst';
-    const timeText = (s) => (s.start && s.end ? `${s.start}–${s.end}` : 'ganztägig');
 
     // ---------- Calendar ----------
     function renderGrid(popKey) {
@@ -137,11 +136,9 @@
         for (const shift of items) {
             const chip = el('button', { type: 'button', className: 'chip' }, [
                 el('span', { className: 'badge', textContent: shift.code }),
-                el('span', {}, [
-                    el('b', { textContent: shift.id === ERASER ? 'Frei' : label(shift) }),
-                    el('small', { textContent: shift.id === ERASER ? 'Eintrag löschen' : timeText(shift) }),
-                ]),
+                el('b', { textContent: shift.id === ERASER ? 'Frei' : label(shift) }),
             ]);
+            if (shift.id === ERASER) chip.title = 'Eintrag löschen';
             chip.dataset.id = shift.id;
             chip.setAttribute('role', 'radio');
             chip.setAttribute('aria-checked', String(shift.id === selected));
@@ -149,13 +146,35 @@
             if (shift.id === ERASER) chip.classList.add('eraser');
             palette.append(chip);
         }
+        updatePaletteFades();
     }
+
+    // Fade the edges only where more chips are hidden, so it reads as "swipe for more".
+    function updatePaletteFades() {
+        const palette = $('palette');
+        const max = palette.scrollWidth - palette.clientWidth;
+        palette.classList.toggle('more-left', palette.scrollLeft > 2);
+        palette.classList.toggle('more-right', palette.scrollLeft < max - 2);
+    }
+
+    $('palette').addEventListener('scroll', updatePaletteFades, { passive: true });
+    window.addEventListener('resize', updatePaletteFades);
+
+    // Mouse wheel scrolls the chips sideways (desktop); touch devices swipe natively.
+    $('palette').addEventListener('wheel', (event) => {
+        const palette = $('palette');
+        if (palette.scrollWidth <= palette.clientWidth || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+        event.preventDefault();
+        palette.scrollBy({ left: event.deltaY });
+    }, { passive: false });
 
     $('palette').addEventListener('click', (event) => {
         const chip = event.target.closest('.chip');
         if (!chip) return;
         selected = chip.dataset.id;
         for (const other of $('palette').children) other.setAttribute('aria-checked', String(other === chip));
+        // Pull a half-hidden chip fully into view once it's picked.
+        chip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     });
 
     // ---------- Export ----------
@@ -170,7 +189,7 @@
             if (!key.startsWith(monthPrefix()) || !shift) continue;
             if (!index.has(id)) {
                 index.set(id, used.length);
-                used.push({ n: label(shift), b: shift.start || '', e: shift.end || '' });
+                used.push(label(shift));
             }
             days[key] = index.get(id);
         }
@@ -240,11 +259,6 @@
             const name = el('input', { value: shift.name, maxLength: 40, autocomplete: 'off', placeholder: 'z. B. Zwischendienst' });
             name.addEventListener('input', () => { shift.name = name.value; persistShifts(); });
 
-            const start = el('input', { type: 'time', value: shift.start || '' });
-            start.addEventListener('change', () => { shift.start = start.value; persistShifts(); });
-            const end = el('input', { type: 'time', value: shift.end || '' });
-            end.addEventListener('change', () => { shift.end = end.value; persistShifts(); });
-
             const remove = el('button', { type: 'button', className: 'delete', title: 'Dienst löschen', innerHTML:
                 '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>' });
             remove.setAttribute('aria-label', `${label(shift)} löschen`);
@@ -255,7 +269,6 @@
                 field('Kürzel', 'code', code),
                 field('Bezeichnung', 'name', name),
                 remove,
-                el('div', { className: 'times' }, [field('Beginn', '', start), field('Ende', '', end)]),
             );
             list.append(row);
         }
@@ -282,7 +295,7 @@
 
     $('add-shift').addEventListener('click', () => {
         const color = COLORS.find((c) => !shifts.some((s) => s.color === c)) || 'slate';
-        shifts.push({ id: `c${Date.now().toString(36)}`, code: 'Z', name: '', start: '', end: '', color });
+        shifts.push({ id: `c${Date.now().toString(36)}`, code: 'Z', name: '', color });
         persistShifts();
         renderShiftList();
         $('shift-list').lastElementChild.querySelector('.name input').focus();

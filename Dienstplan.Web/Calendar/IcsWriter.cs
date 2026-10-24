@@ -4,7 +4,7 @@ namespace Dienstplan.Web.Calendar;
 
 /// <summary>
 /// Writes RFC 5545 compliant iCalendar files (CRLF line endings, UID/DTSTAMP, escaping, line folding).
-/// Times are written as "floating" local time, so a 06:00 shift stays 06:00 in whatever timezone the phone is in.
+/// Every shift becomes an all-day event, so it shows up as a banner on that day in the calendar.
 /// </summary>
 public static class IcsWriter
 {
@@ -24,28 +24,11 @@ public static class IcsWriter
         {
             Line("BEGIN:VEVENT");
             // One shift per day: re-importing the same day yields the same UID, so calendars can update instead of duplicating.
-            Line($"UID:dienst-{shift.Day:yyyyMMdd}@dienstplan.code-inside.de");
+            Line($"UID:dienst-{shift.Day:yyyyMMdd}@dienstplan.codeinside.eu");
             Line($"DTSTAMP:{stamp}");
-
-            if (shift is { Start: { } start, End: { } end })
-            {
-                var from = shift.Day.ToDateTime(start);
-                var to = shift.Day.ToDateTime(end);
-                // Night shifts end on the following day.
-                if (to <= from)
-                    to = to.AddDays(1);
-
-                Line($"DTSTART:{from:yyyyMMdd'T'HHmmss}");
-                Line($"DTEND:{to:yyyyMMdd'T'HHmmss}");
-                Line("TRANSP:OPAQUE");
-            }
-            else
-            {
-                Line($"DTSTART;VALUE=DATE:{shift.Day:yyyyMMdd}");
-                Line($"DTEND;VALUE=DATE:{shift.Day.AddDays(1):yyyyMMdd}");
-                Line("TRANSP:TRANSPARENT");
-            }
-
+            Line($"DTSTART;VALUE=DATE:{shift.Day:yyyyMMdd}");
+            Line($"DTEND;VALUE=DATE:{shift.Day.AddDays(1):yyyyMMdd}");
+            Line("TRANSP:TRANSPARENT");
             Line($"SUMMARY:{Escape(shift.Title)}");
             Line("END:VEVENT");
         }
