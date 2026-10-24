@@ -293,6 +293,19 @@ button { cursor: pointer; }
     color: var(--text);
 }
 
+.footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: .78rem;
+}
+.footer a {
+    color: var(--muted);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--muted) 45%, transparent);
+    text-underline-offset: 3px;
+}
+.footer a:hover { color: var(--text); }
+
 /* ---------- Dock ---------- */
 .dock {
     position: fixed;
