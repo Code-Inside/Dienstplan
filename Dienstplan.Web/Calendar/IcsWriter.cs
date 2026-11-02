@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Dienstplan.Web.Calendar;
@@ -23,8 +24,7 @@ public static class IcsWriter
         foreach (var shift in events)
         {
             Line("BEGIN:VEVENT");
-            // Keyed by start day: re-importing yields the same UID, so calendars can update instead of duplicating.
-            Line($"UID:dienst-{shift.Start:yyyyMMdd}@dienstplan.codeinside.eu");
+            Line($"UID:{Uid(shift)}");
             Line($"DTSTAMP:{stamp}");
             Line($"DTSTART;VALUE=DATE:{shift.Start:yyyyMMdd}");
             // DTEND of an all-day event is exclusive: the day after the last shift day.
@@ -36,6 +36,15 @@ public static class IcsWriter
 
         Line("END:VCALENDAR");
         return sb.ToString();
+    }
+
+    // The UID covers the whole event (first day, last day, title). Apple Calendar treats a known UID as
+    // "already added" and keeps the old event, so a UID based on the start day alone made a changed block
+    // (e.g. a single day that became a 3-day event) silently show the old version on iOS.
+    private static string Uid(ShiftEvent shift)
+    {
+        var title = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(shift.Title)))[..8];
+        return $"dienst-{shift.Start:yyyyMMdd}-{shift.End:yyyyMMdd}-{title}@dienstplan.codeinside.eu";
     }
 
     private static string Escape(string text) => text

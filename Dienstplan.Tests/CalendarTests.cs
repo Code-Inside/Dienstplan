@@ -88,7 +88,7 @@ public class CalendarTests
         Assert.StartsWith("BEGIN:VCALENDAR\r\n", ics);
         Assert.EndsWith("END:VCALENDAR\r\n", ics);
         Assert.DoesNotContain("\r\n\r\n", ics);
-        Assert.Contains("UID:dienst-20261103@dienstplan.codeinside.eu\r\n", ics);
+        Assert.Matches(@"\r\nUID:dienst-20261103-20261103-[0-9a-f]{8}@dienstplan\.codeinside\.eu\r\n", ics);
         Assert.Contains("DTSTAMP:20261024T120000Z\r\n", ics);
         Assert.Contains("DTSTART;VALUE=DATE:20261103\r\nDTEND;VALUE=DATE:20261104\r\n", ics);
         Assert.Contains("SUMMARY:Frühdienst\r\n", ics);
@@ -107,8 +107,24 @@ public class CalendarTests
     {
         var ics = IcsWriter.Write([new ShiftEvent(new DateOnly(2026, 11, 2), new DateOnly(2026, 11, 4), "Frühdienst")], Stamp);
 
-        Assert.Contains("UID:dienst-20261102@dienstplan.codeinside.eu\r\n", ics);
+        Assert.Matches(@"\r\nUID:dienst-20261102-20261104-[0-9a-f]{8}@dienstplan\.codeinside\.eu\r\n", ics);
         Assert.Contains("DTSTART;VALUE=DATE:20261102\r\nDTEND;VALUE=DATE:20261105\r\n", ics);
+    }
+
+    [Fact]
+    public void Uid_changes_whenever_the_event_changes_and_is_stable_otherwise()
+    {
+        static string Uid(ShiftEvent e) =>
+            IcsWriter.Write([e], Stamp).Split("\r\n").Single(l => l.StartsWith("UID:"));
+
+        var day = new DateOnly(2026, 11, 3);
+        var single = new ShiftEvent(day, "Frühdienst");
+
+        // Same start day, but longer block or other shift: must not collide with an already imported event.
+        Assert.NotEqual(Uid(single), Uid(new ShiftEvent(day, day.AddDays(2), "Frühdienst")));
+        Assert.NotEqual(Uid(single), Uid(new ShiftEvent(day, "Spätdienst")));
+        // Exactly the same event again: same UID, so re-importing doesn't duplicate it.
+        Assert.Equal(Uid(single), Uid(new ShiftEvent(day, "Frühdienst")));
     }
 
     [Fact]
