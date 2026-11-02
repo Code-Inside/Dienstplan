@@ -8,7 +8,7 @@
         { id: 'n', code: 'N', name: 'Nachtdienst', color: 'night' },
     ];
     const ERASER = 'erase';
-    const KEYS = { shifts: 'dienstplan.shifts', plan: 'dienstplan.plan', theme: 'dienstplan.theme' };
+    const KEYS = { shifts: 'dienstplan.shifts', plan: 'dienstplan.plan', theme: 'dienstplan.theme', options: 'dienstplan.options' };
     const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
     const $ = (id) => document.getElementById(id);
@@ -31,6 +31,8 @@
     if (!Array.isArray(shifts) || shifts.length === 0) shifts = clone(DEFAULT_SHIFTS);
     let plan = load(KEYS.plan, {});
     if (typeof plan !== 'object' || plan === null) plan = {};
+    // Export options; merging back-to-back shifts into one multi-day event is the default.
+    const options = { merge: true, ...load(KEYS.options, {}) };
 
     const today = new Date();
     let year = today.getFullYear();
@@ -195,7 +197,7 @@
         }
         if (used.length === 0) return null;
 
-        const bytes = new TextEncoder().encode(JSON.stringify({ s: used, d: days }));
+        const bytes = new TextEncoder().encode(JSON.stringify({ s: used, d: days, m: options.merge }));
         let binary = '';
         bytes.forEach((b) => { binary += String.fromCharCode(b); });
         const encoded = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -313,7 +315,14 @@
 
     $('open-settings').addEventListener('click', () => {
         renderShiftList();
+        $('merge-toggle').checked = options.merge;
         dialog.showModal();
+    });
+
+    $('merge-toggle').addEventListener('change', (event) => {
+        options.merge = event.target.checked;
+        save(KEYS.options, options);
+        updateExport();
     });
     // Tap on the backdrop closes the sheet.
     dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });

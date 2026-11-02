@@ -28,7 +28,7 @@ app.MapGet("/dienstplan.ics", (string? p, HttpContext context) =>
     if (!ShiftPlan.TryDecode(p, out var events))
         return Results.BadRequest("Der Dienstplan konnte nicht gelesen werden.");
 
-    var fileName = $"dienstplan-{events[0].Day:yyyy-MM}.ics";
+    var fileName = $"dienstplan-{events[0].Start:yyyy-MM}.ics";
     context.Response.Headers.ContentDisposition = $"inline; filename=\"{fileName}\"";
     return Results.Text(IcsWriter.Write(events, DateTime.UtcNow), "text/calendar; charset=utf-8");
 });

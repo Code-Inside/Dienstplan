@@ -4,7 +4,7 @@ namespace Dienstplan.Web.Calendar;
 
 /// <summary>
 /// Writes RFC 5545 compliant iCalendar files (CRLF line endings, UID/DTSTAMP, escaping, line folding).
-/// Every shift becomes an all-day event, so it shows up as a banner on that day in the calendar.
+/// Every shift becomes an all-day event (possibly spanning several days), so it shows up as a banner in the calendar.
 /// </summary>
 public static class IcsWriter
 {
@@ -23,11 +23,12 @@ public static class IcsWriter
         foreach (var shift in events)
         {
             Line("BEGIN:VEVENT");
-            // One shift per day: re-importing the same day yields the same UID, so calendars can update instead of duplicating.
-            Line($"UID:dienst-{shift.Day:yyyyMMdd}@dienstplan.codeinside.eu");
+            // Keyed by start day: re-importing yields the same UID, so calendars can update instead of duplicating.
+            Line($"UID:dienst-{shift.Start:yyyyMMdd}@dienstplan.codeinside.eu");
             Line($"DTSTAMP:{stamp}");
-            Line($"DTSTART;VALUE=DATE:{shift.Day:yyyyMMdd}");
-            Line($"DTEND;VALUE=DATE:{shift.Day.AddDays(1):yyyyMMdd}");
+            Line($"DTSTART;VALUE=DATE:{shift.Start:yyyyMMdd}");
+            // DTEND of an all-day event is exclusive: the day after the last shift day.
+            Line($"DTEND;VALUE=DATE:{shift.End.AddDays(1):yyyyMMdd}");
             Line("TRANSP:TRANSPARENT");
             Line($"SUMMARY:{Escape(shift.Title)}");
             Line("END:VEVENT");

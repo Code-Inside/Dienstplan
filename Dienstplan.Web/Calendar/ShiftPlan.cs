@@ -6,13 +6,18 @@ using Microsoft.AspNetCore.WebUtilities;
 namespace Dienstplan.Web.Calendar;
 
 /// <summary>
-/// A single shift on a given day; it is written as an all-day calendar event.
+/// A shift written as an all-day calendar event from <see cref="Start"/> through <see cref="End"/> (inclusive).
+/// A single day has Start == End.
 /// </summary>
-public sealed record ShiftEvent(DateOnly Day, string Title);
+public sealed record ShiftEvent(DateOnly Start, DateOnly End, string Title)
+{
+    public ShiftEvent(DateOnly day, string title) : this(day, day, title) { }
+}
 
 /// <summary>
 /// Decodes the compact plan the browser sends as base64url-encoded JSON in the query string:
-/// { "s": [ "Frühdienst", "Spätdienst" ], "d": { "2026-11-03": 0, "2026-11-04": 1 } }
+/// { "s": [ "Frühdienst", "Spätdienst" ], "d": { "2026-11-03": 0, "2026-11-04": 1 }, "m": true }
+/// "m" merges consecutive days with the same shift into one multi-day event.
 /// Keeping everything in the URL makes the .ics a plain GET request, which is what iOS Safari
 /// needs to show its "Add all to calendar" sheet.
 /// </summary>
@@ -23,7 +28,8 @@ public static class ShiftPlan
 
     private sealed record Payload(
         [property: JsonPropertyName("s")] List<string?>? Shifts,
-        [property: JsonPropertyName("d")] Dictionary<string, int>? Days);
+        [property: JsonPropertyName("d")] Dictionary<string, int>? Days,
+        [property: JsonPropertyName("m")] bool Merge = false);
 
     public static bool TryDecode(string? encoded, out IReadOnlyList<ShiftEvent> events)
     {
@@ -59,8 +65,26 @@ public static class ShiftPlan
             result.Add(new ShiftEvent(day, title));
         }
 
-        events = result.OrderBy(e => e.Day).ToList();
+        result.Sort((a, b) => a.Start.CompareTo(b.Start));
+        events = payload.Merge ? MergeConsecutive(result) : result;
         return true;
+    }
+
+    /// <summary>
+    /// Joins back-to-back days with the same shift, e.g. Früh Mon + Tue + Wed becomes one event Mon–Wed.
+    /// Expects the events sorted by start date.
+    /// </summary>
+    public static IReadOnlyList<ShiftEvent> MergeConsecutive(IEnumerable<ShiftEvent> sorted)
+    {
+        var merged = new List<ShiftEvent>();
+        foreach (var current in sorted)
+        {
+            if (merged.Count > 0 && merged[^1] is var last && last.Title == current.Title && last.End.AddDays(1) == current.Start)
+                merged[^1] = last with { End = current.End };
+            else
+                merged.Add(current);
+        }
+        return merged;
     }
 
     private static string Clean(string? value)

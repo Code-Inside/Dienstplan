@@ -30,6 +30,42 @@ public class CalendarTests
             events);
     }
 
+    [Fact]
+    public void Merges_consecutive_days_with_the_same_shift_when_requested()
+    {
+        var encoded = Encode(new
+        {
+            s = new[] { "Frühdienst", "Spätdienst" },
+            d = new Dictionary<string, int>
+            {
+                ["2026-11-02"] = 0, ["2026-11-03"] = 0, ["2026-11-04"] = 0, // Mo–Mi Früh
+                ["2026-11-05"] = 1,                                         // Do Spät (other shift)
+                ["2026-11-07"] = 1,                                         // Sa Spät (gap on Fr)
+                ["2026-11-30"] = 0, ["2026-12-01"] = 0,                     // across month end
+            },
+            m = true,
+        });
+
+        Assert.True(ShiftPlan.TryDecode(encoded, out var events));
+        Assert.Equal(
+            [
+                new ShiftEvent(new DateOnly(2026, 11, 2), new DateOnly(2026, 11, 4), "Frühdienst"),
+                new ShiftEvent(new DateOnly(2026, 11, 5), "Spätdienst"),
+                new ShiftEvent(new DateOnly(2026, 11, 7), "Spätdienst"),
+                new ShiftEvent(new DateOnly(2026, 11, 30), new DateOnly(2026, 12, 1), "Frühdienst"),
+            ],
+            events);
+    }
+
+    [Fact]
+    public void Keeps_single_days_without_merge_flag()
+    {
+        var encoded = Encode(new { s = new[] { "Frühdienst" }, d = new Dictionary<string, int> { ["2026-11-02"] = 0, ["2026-11-03"] = 0 } });
+
+        Assert.True(ShiftPlan.TryDecode(encoded, out var events));
+        Assert.Equal(2, events.Count);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -64,6 +100,15 @@ public class CalendarTests
         var ics = IcsWriter.Write([new ShiftEvent(new DateOnly(2026, 12, 31), "Nachtdienst")], Stamp);
 
         Assert.Contains("DTSTART;VALUE=DATE:20261231\r\nDTEND;VALUE=DATE:20270101\r\n", ics);
+    }
+
+    [Fact]
+    public void Multi_day_event_ends_the_day_after_its_last_day()
+    {
+        var ics = IcsWriter.Write([new ShiftEvent(new DateOnly(2026, 11, 2), new DateOnly(2026, 11, 4), "Frühdienst")], Stamp);
+
+        Assert.Contains("UID:dienst-20261102@dienstplan.codeinside.eu\r\n", ics);
+        Assert.Contains("DTSTART;VALUE=DATE:20261102\r\nDTEND;VALUE=DATE:20261105\r\n", ics);
     }
 
     [Fact]

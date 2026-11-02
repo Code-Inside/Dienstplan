@@ -17,7 +17,7 @@
                 <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z" /></svg>
                 <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2" /><path d="M12 2v2.2M12 19.8V22M2 12h2.2M19.8 12H22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6" /></svg>
             </button>
-            <button id="open-settings" class="icon-btn" type="button" aria-label="Meine Dienste bearbeiten" title="Meine Dienste bearbeiten">
+            <button id="open-settings" class="icon-btn" type="button" aria-label="Einstellungen" title="Einstellungen">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg>
             </button>
         </div>
@@ -69,12 +69,23 @@
 <dialog id="settings" aria-labelledby="settings-title">
     <form method="dialog" class="sheet">
         <header class="sheet-head">
-            <h2 id="settings-title">Meine Dienste</h2>
+            <h2 id="settings-title">Einstellungen</h2>
             <button class="icon-btn" value="close" aria-label="Schließen">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
             </button>
         </header>
-        <p class="muted">Alle Dienste werden als ganztägige Termine eingetragen. Deine Einstellungen werden nur in diesem Browser gespeichert.</p>
+        <p class="muted">Wird nur in diesem Browser gespeichert.</p>
+
+        <h3 class="sheet-section">Kalender-Export</h3>
+        <label class="toggle-row">
+            <span>
+                <b>Dienste am Stück zusammenfassen</b>
+                <small>Z.&nbsp;B. drei Frühdienste Mo–Mi werden ein ganztägiger Termin über drei Tage.</small>
+            </span>
+            <input id="merge-toggle" type="checkbox" role="switch" class="switch" checked />
+        </label>
+
+        <h3 class="sheet-section">Meine Dienste</h3>
         <div id="shift-list" class="shift-list"></div>
         <div class="sheet-actions">
             <button id="add-shift" class="secondary" type="button">+ Dienst hinzufügen</button>
